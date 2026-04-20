@@ -68,14 +68,25 @@ function _isPrivateIPv6(addr) {
 
 function _lookupPreferV4(hostname, _opts, cb) {
   // mqtt.js -> ws -> http(s).request uses lookup() if provided.
-  // We hard-prefer A records; only fall back to AAAA if it's not ULA.
-  dns.resolve4(hostname, (e4, a4) => {
-    if (!e4 && a4 && a4.length) return cb(null, a4[0], 4);
-    dns.resolve6(hostname, (e6, a6) => {
-      const usable = (a6 || []).find((ip) => net.isIP(ip) === 6 && !_isPrivateIPv6(ip));
-      if (!e6 && usable) return cb(null, usable, 6);
-      cb(e4 || e6 || new Error(`DNS lookup failed for ${hostname}`));
-    });
+  // Prefer IPv4; avoid ULA IPv6 (fd00::/8) which is not reachable publicly.
+  dns.lookup(hostname, { all: true, verbatim: true }, (err, addrs) => {
+    if (err) return cb(err);
+    const list = Array.isArray(addrs) ? addrs : [];
+    const v4 = list.find((a) => a?.address && net.isIP(a.address) === 4);
+    if (v4?.address) return cb(null, v4.address, 4);
+
+    const v6 = list.find((a) => a?.address && net.isIP(a.address) === 6 && !_isPrivateIPv6(a.address));
+    if (v6?.address) return cb(null, v6.address, 6);
+
+    const anyV6 = list.find((a) => a?.address && net.isIP(a.address) === 6);
+    if (anyV6?.address && _isPrivateIPv6(anyV6.address)) {
+      return cb(
+        new Error(
+          `DNS for ${hostname} resolved to private IPv6 (${anyV6.address}). Enable Cloudflare proxy (orange cloud) for the CNAME record.`
+        )
+      );
+    }
+    return cb(new Error(`DNS lookup returned no usable addresses for ${hostname}`));
   });
 }
 

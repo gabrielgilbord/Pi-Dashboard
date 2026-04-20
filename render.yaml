@@ -22,7 +22,7 @@ services:
     rootDir: web
     # Work around npm optional-deps bug affecting Rollup native package on Linux.
     # See: https://github.com/npm/cli/issues/4828
-    buildCommand: rm -f package-lock.json && npm install --include=optional --no-audit --no-fund && npm run build
+    buildCommand: rm -rf node_modules package-lock.json && npm install --include=optional --no-audit --no-fund && npm run build
     staticPublishPath: dist
     envVars:
       - key: VITE_PI_SERVER_URL

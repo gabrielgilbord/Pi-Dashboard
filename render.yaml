@@ -16,8 +16,9 @@ services:
       - key: BASE_TOPIC
         value: dt
 
-  - type: static_site
+  - type: web
     name: pi-dashboard-web
+    env: static
     rootDir: web
     buildCommand: npm install && npm run build
     staticPublishPath: dist

@@ -18,6 +18,8 @@ const MQTT_URL = String(process.env.MQTT_URL || "wss://mqtt.luxops.es").trim();
 const MQTT_USERNAME = process.env.MQTT_USERNAME || "";
 const MQTT_PASSWORD = process.env.MQTT_PASSWORD || "";
 const BASE_TOPIC = process.env.BASE_TOPIC || "dt";
+// mqtt.js defaults WS path to "/mqtt"; Mosquitto commonly listens on "/".
+const MQTT_WS_PATH = String(process.env.MQTT_WS_PATH || "/").trim() || "/";
 
 const app = express();
 app.use(cors());
@@ -84,12 +86,15 @@ const mqttClient = mqtt.connect(MQTT_URL, {
   // Ensure WSS connect doesn't use broken IPv6 ULA resolutions.
   wsOptions: {
     lookup: _lookupPreferV4,
+    path: MQTT_WS_PATH,
   },
 });
 
 mqttClient.on("connect", () => {
   // eslint-disable-next-line no-console
-  console.log(`[pi-dashboard] mqtt connected: ${MQTT_URL} (host=${_mqttHostForLog()} base=${BASE_TOPIC})`);
+  console.log(
+    `[pi-dashboard] mqtt connected: ${MQTT_URL} (host=${_mqttHostForLog()} path=${MQTT_WS_PATH} base=${BASE_TOPIC})`
+  );
   // Agent topics:
   // - dt/<device_id>/status (retained + LWT)
   // - dt/<device_id>/telemetry (retained)

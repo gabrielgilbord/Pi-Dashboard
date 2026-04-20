@@ -4,7 +4,7 @@ services:
     env: node
     plan: free
     rootDir: server
-    buildCommand: npm install
+    buildCommand: npm ci
     startCommand: node src/index.js
     envVars:
       - key: MQTT_URL
@@ -20,7 +20,7 @@ services:
     name: pi-dashboard-web
     env: static
     rootDir: web
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci --include=optional && npm run build
     staticPublishPath: dist
     envVars:
       - key: VITE_PI_SERVER_URL

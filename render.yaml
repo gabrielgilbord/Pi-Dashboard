@@ -20,9 +20,9 @@ services:
     name: pi-dashboard-web
     env: static
     rootDir: web
-    # Work around npm optional-deps bug affecting Rollup native package on Linux.
-    # See: https://github.com/npm/cli/issues/4828
-    buildCommand: rm -rf node_modules package-lock.json && npm install --include=optional --no-audit --no-fund && npm run build
+    # Work around npm optional-deps bug affecting Rollup native package on Linux
+    # by using pnpm via corepack on Render's Linux build image.
+    buildCommand: rm -rf node_modules package-lock.json && corepack enable && pnpm install --no-frozen-lockfile && pnpm run build
     staticPublishPath: dist
     envVars:
       - key: VITE_PI_SERVER_URL

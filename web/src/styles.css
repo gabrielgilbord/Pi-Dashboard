@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(1200px 700px at 15% 10%, rgba(79, 124, 255, 0.25), transparent 60%),
+    radial-gradient(900px 600px at 85% 15%, rgba(43, 213, 118, 0.16), transparent 55%),
+    radial-gradient(900px 600px at 50% 95%, rgba(255, 77, 109, 0.12), transparent 60%),
+    linear-gradient(180deg, #070b16 0%, #0b1020 45%, #070b16 100%);
+}
+
+.noise {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.15'/%3E%3C/svg%3E");
+  opacity: 0.22;
+  mix-blend-mode: overlay;
+}
+
+.glass {
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 12px 34px rgba(0,0,0,0.35);
+}
+
+.glass-strong {
+  background: linear-gradient(180deg, rgba(17,26,51,0.92), rgba(17,26,51,0.70));
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.45);
+}
+
+.shine {
+  position: relative;
+  overflow: hidden;
+}
+.shine:before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  background: radial-gradient(700px 120px at 20% 0%, rgba(255,255,255,0.12), transparent 55%);
+  pointer-events: none;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition;
+}
+.btn:disabled {
+  @apply opacity-60 cursor-not-allowed;
+}
+.btn-primary {
+  @apply bg-accent text-white hover:brightness-110 active:brightness-95;
+}
+.btn-ghost {
+  @apply bg-white/10 hover:bg-white/15;
+}
+.btn-danger {
+  @apply bg-bad text-white hover:brightness-110 active:brightness-95;
+}
+
+.input {
+  @apply w-full rounded-xl border border-stroke bg-card/40 px-3 py-2 text-sm text-text placeholder:text-muted/70 outline-none ring-0;
+}
+.input:focus {
+  box-shadow: 0 0 0 3px rgba(79, 124, 255, 0.22);
+  border-color: rgba(79, 124, 255, 0.55);
+}
+

@@ -13,6 +13,8 @@ services:
         sync: false
       - key: MQTT_PASSWORD
         sync: false
+      - key: MQTT_WS_PATH
+        sync: false
       - key: BASE_TOPIC
         value: dt
 

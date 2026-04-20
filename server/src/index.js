@@ -18,8 +18,8 @@ const MQTT_URL = String(process.env.MQTT_URL || "wss://mqtt.luxops.es").trim();
 const MQTT_USERNAME = process.env.MQTT_USERNAME || "";
 const MQTT_PASSWORD = process.env.MQTT_PASSWORD || "";
 const BASE_TOPIC = process.env.BASE_TOPIC || "dt";
-// mqtt.js defaults WS path to "/mqtt"; Mosquitto commonly listens on "/".
-const MQTT_WS_PATH = String(process.env.MQTT_WS_PATH || "/").trim() || "/";
+// Mosquitto websockets commonly use "/mqtt".
+const MQTT_WS_PATH = String(process.env.MQTT_WS_PATH || "/mqtt").trim() || "/mqtt";
 
 const app = express();
 app.use(cors());
@@ -112,6 +112,13 @@ mqttClient.on("reconnect", () => {
 mqttClient.on("close", () => {
   // eslint-disable-next-line no-console
   console.log("[pi-dashboard] mqtt closed");
+});
+
+mqttClient.on("packetreceive", (packet) => {
+  if (packet?.cmd === "connack") {
+    // eslint-disable-next-line no-console
+    console.log("[pi-dashboard] mqtt connack:", packet);
+  }
 });
 
 mqttClient.on("offline", () => {

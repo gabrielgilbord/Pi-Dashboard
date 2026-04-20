@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 // Load env explicitly from Pi-Dashboard/server/.env (concurrently/workspaces may run with a different cwd).
 dotenv.config({ path: new URL("../.env", import.meta.url) });
 import dns from "dns";
+import net from "net";
 import express from "express";
 import cors from "cors";
 import http from "http";
@@ -58,10 +59,32 @@ function _mqttHostForLog() {
   }
 }
 
+function _isPrivateIPv6(addr) {
+  // ULA fd00::/8 (includes fd10::)
+  return typeof addr === "string" && addr.toLowerCase().startsWith("fd");
+}
+
+function _lookupPreferV4(hostname, _opts, cb) {
+  // mqtt.js -> ws -> http(s).request uses lookup() if provided.
+  // We hard-prefer A records; only fall back to AAAA if it's not ULA.
+  dns.resolve4(hostname, (e4, a4) => {
+    if (!e4 && a4 && a4.length) return cb(null, a4[0], 4);
+    dns.resolve6(hostname, (e6, a6) => {
+      const usable = (a6 || []).find((ip) => net.isIP(ip) === 6 && !_isPrivateIPv6(ip));
+      if (!e6 && usable) return cb(null, usable, 6);
+      cb(e4 || e6 || new Error(`DNS lookup failed for ${hostname}`));
+    });
+  });
+}
+
 const mqttClient = mqtt.connect(MQTT_URL, {
   username: MQTT_USERNAME || undefined,
   password: MQTT_PASSWORD || undefined,
   reconnectPeriod: 1500,
+  // Ensure WSS connect doesn't use broken IPv6 ULA resolutions.
+  wsOptions: {
+    lookup: _lookupPreferV4,
+  },
 });
 
 mqttClient.on("connect", () => {

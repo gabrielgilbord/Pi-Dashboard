@@ -9,7 +9,8 @@ import { Server as SocketIOServer } from "socket.io";
 import mqtt from "mqtt";
 import { nanoid } from "nanoid";
 
-const PORT = Number(process.env.PI_DASHBOARD_PORT || 9100);
+// Render/most PaaS set PORT. Keep PI_DASHBOARD_PORT for local dev.
+const PORT = Number(process.env.PORT || process.env.PI_DASHBOARD_PORT || 9100);
 // Cloudflare Tunnel (Mosquitto WS) example:
 // MQTT_URL="wss://mqtt.luxops.es"
 const MQTT_URL = String(process.env.MQTT_URL || "wss://mqtt.luxops.es").trim();

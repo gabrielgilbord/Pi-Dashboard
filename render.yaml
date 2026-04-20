@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: pi-dashboard-server
+    env: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node src/index.js
+    envVars:
+      - key: MQTT_URL
+        sync: false
+      - key: MQTT_USERNAME
+        sync: false
+      - key: MQTT_PASSWORD
+        sync: false
+      - key: BASE_TOPIC
+        value: dt
+
+  - type: web
+    name: pi-dashboard-web
+    env: static
+    plan: free
+    rootDir: web
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_PI_SERVER_URL
+        sync: false
+

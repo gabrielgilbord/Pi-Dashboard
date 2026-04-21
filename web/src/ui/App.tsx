@@ -686,6 +686,21 @@ export function App() {
                     >
                       {busyCmd === `${sel.device_id}:app.config.get` ? "Leyendo…" : "Leer config"}
                     </button>
+                    <button
+                      className="btn btn-ghost"
+                      disabled={busyCmd === `${sel.device_id}:app.env.get`}
+                      onClick={async () => {
+                        try {
+                          await sendCmd(sel.device_id, "app.env.get");
+                        } catch (e: any) {
+                          setToast({ tone: "bad", text: String(e?.message || e) });
+                        } finally {
+                          setBusyCmd(null);
+                        }
+                      }}
+                    >
+                      {busyCmd === `${sel.device_id}:app.env.get` ? "Leyendo…" : "Leer env (runtime)"}
+                    </button>
                   </div>
                   <div className="mt-2 text-xs text-muted">
                     Esto escribe variables <code className="rounded bg-white/5 px-1 py-0.5">H2T_*</code> en el .env del dispositivo.

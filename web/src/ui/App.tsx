@@ -82,6 +82,20 @@ export function App() {
   const [cfgKey, setCfgKey] = useState("");
   const [cfgValue, setCfgValue] = useState("");
   const [cfgRestart, setCfgRestart] = useState(true);
+  const [pRaw17Endian, setPRaw17Endian] = useState<"big" | "little">("big");
+  const [pRaw17Signed, setPRaw17Signed] = useState(false);
+  const [pPipeline, setPPipeline] = useState("RNS+HKDF (actual)");
+  const [pEcgSource, setPEcgSource] = useState("ECG 3bx en vivo");
+  const [pEntropyThr, setPEntropyThr] = useState("0.85");
+  const [pInvalidPolicy, setPInvalidPolicy] = useState("Descartar no válidas");
+  const [pRecombine, setPRecombine] = useState("Mitad + mitad");
+  const [pMaxInvalidPool, setPMaxInvalidPool] = useState("24");
+  const [pKeepTailBits, setPKeepTailBits] = useState(true);
+  const [pAnalysisSamples, setPAnalysisSamples] = useState("2048");
+  const [pScanMode, setPScanMode] = useState("Desplazamiento 1b (máximo)");
+  const [pKeyHex, setPKeyHex] = useState("");
+  const [pWindowLen, setPWindowLen] = useState("256");
+  const [pAuto2s, setPAuto2s] = useState(false);
   const socketRef = useRef<Socket | null>(null);
 
   const apiBase = useMemo(() => {
@@ -545,6 +559,110 @@ export function App() {
                   <div className="mt-2 text-xs text-muted">
                     Envía <code className="rounded bg-white/5 px-1 py-0.5">app.config.set</code> al agente del dispositivo.
                     Puedes aplicar un parámetro por vez (rápido y seguro).
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-stroke bg-card/35 p-4">
+                  <div className="text-xs font-semibold text-muted">Parser / TD8-ECG (presets)</div>
+                  <div className="mt-2 grid grid-cols-1 gap-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <select className="input" value={pRaw17Endian} onChange={(e) => setPRaw17Endian(e.target.value as any)}>
+                        <option value="big">RAW17 endian: big</option>
+                        <option value="little">RAW17 endian: little</option>
+                      </select>
+                      <label className="flex items-center gap-2 rounded-2xl border border-stroke bg-white/5 px-3 py-2 text-xs text-muted">
+                        <input type="checkbox" checked={pRaw17Signed} onChange={(e) => setPRaw17Signed(e.target.checked)} />
+                        RAW17 signed int24
+                      </label>
+                    </div>
+
+                    <select className="input" value={pPipeline} onChange={(e) => setPPipeline(e.target.value)}>
+                      <option value="RNS+HKDF (actual)">Pipeline: RNS+HKDF (actual)</option>
+                      <option value="Acumulativo 11 bits/muestra">Pipeline: Acumulativo 11 bits/muestra</option>
+                    </select>
+
+                    <select className="input" value={pEcgSource} onChange={(e) => setPEcgSource(e.target.value)}>
+                      <option value="ECG 3bx en vivo">Fuente ECG: ECG 3bx en vivo</option>
+                      <option value="ECG sintético (función)">Fuente ECG: ECG sintético (función)</option>
+                    </select>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <input className="input" value={pEntropyThr} onChange={(e) => setPEntropyThr(e.target.value)} placeholder="Umbral entropía (ej: 0.85)" />
+                      <input className="input" value={pAnalysisSamples} onChange={(e) => setPAnalysisSamples(e.target.value)} placeholder="Análisis conjunto (muestras)" />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <select className="input" value={pInvalidPolicy} onChange={(e) => setPInvalidPolicy(e.target.value)}>
+                        <option value="Descartar no válidas">No válidas: Descartar</option>
+                        <option value="Guardar para recombinar">No válidas: Guardar para recombinar</option>
+                      </select>
+                      <select className="input" value={pRecombine} onChange={(e) => setPRecombine(e.target.value)}>
+                        <option value="Mitad + mitad">Recombinación: Mitad + mitad</option>
+                        <option value="Alternar bits">Recombinación: Alternar bits</option>
+                        <option value="XOR + SHA256">Recombinación: XOR + SHA256</option>
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <input className="input" value={pMaxInvalidPool} onChange={(e) => setPMaxInvalidPool(e.target.value)} placeholder="Pool no válidas (máx)" />
+                      <select className="input" value={pScanMode} onChange={(e) => setPScanMode(e.target.value)}>
+                        <option value="No solapado (128b)">Barrido: No solapado (128b)</option>
+                        <option value="Desplazamiento 11b">Barrido: Desplazamiento 11b</option>
+                        <option value="Desplazamiento 1b (máximo)">Barrido: Desplazamiento 1b (máximo)</option>
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <input className="input" value={pWindowLen} onChange={(e) => setPWindowLen(e.target.value)} placeholder="Ventana (flujo) (ej: 256)" />
+                      <label className="flex items-center gap-2 rounded-2xl border border-stroke bg-white/5 px-3 py-2 text-xs text-muted">
+                        <input type="checkbox" checked={pKeepTailBits} onChange={(e) => setPKeepTailBits(e.target.checked)} />
+                        Conservar bits sobrantes
+                      </label>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="flex items-center gap-2 rounded-2xl border border-stroke bg-white/5 px-3 py-2 text-xs text-muted">
+                        <input type="checkbox" checked={pAuto2s} onChange={(e) => setPAuto2s(e.target.checked)} />
+                        Auto cada 2s (flujo)
+                      </label>
+                      <input className="input" value={pKeyHex} onChange={(e) => setPKeyHex(e.target.value)} placeholder="Clave 128b hex (opcional)" />
+                    </div>
+
+                    <button
+                      className="btn btn-primary"
+                      disabled={busyCmd === `${sel.device_id}:app.config.set`}
+                      onClick={async () => {
+                        try {
+                          const env: Record<string, string> = {
+                            H2T_UART_RAW17_ENDIAN: pRaw17Endian,
+                            H2T_UART_RAW17_SIGNED_INT24: pRaw17Signed ? "1" : "0",
+                            H2T_TD8_PIPELINE: pPipeline,
+                            H2T_TD8_ECG_SOURCE: pEcgSource,
+                            H2T_TD8_ENTROPY_THRESHOLD: pEntropyThr.trim(),
+                            H2T_TD8_INVALID_POLICY: pInvalidPolicy,
+                            H2T_TD8_RECOMBINE_STRATEGY: pRecombine,
+                            H2T_TD8_MAX_INVALID_POOL: pMaxInvalidPool.trim(),
+                            H2T_TD8_KEEP_TAIL_BITS: pKeepTailBits ? "1" : "0",
+                            H2T_TD8_ANALYSIS_WINDOW_SAMPLES: pAnalysisSamples.trim(),
+                            H2T_TD8_SCAN_MODE: pScanMode,
+                            H2T_TD8_KEY_128_HEX: pKeyHex.trim(),
+                            H2T_TD8_WINDOW_LEN: pWindowLen.trim(),
+                            H2T_TD8_AUTO_EVERY_2S: pAuto2s ? "1" : "0"
+                          };
+                          await sendCmd(sel.device_id, "app.config.set", { env, restart: true });
+                          setToast({ tone: "good", text: "Config aplicada (parser/TD8). Reiniciando app…" });
+                        } catch (e: any) {
+                          setToast({ tone: "bad", text: String(e?.message || e) });
+                        } finally {
+                          setBusyCmd(null);
+                        }
+                      }}
+                    >
+                      Aplicar presets (reinicia)
+                    </button>
+                  </div>
+                  <div className="mt-2 text-xs text-muted">
+                    Esto escribe variables <code className="rounded bg-white/5 px-1 py-0.5">H2T_*</code> en el .env del dispositivo y reinicia.
                   </div>
                 </div>
               </>

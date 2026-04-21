@@ -68,21 +68,60 @@ function _isPrivateIPv6(addr) {
 
 function _lookupPreferV4(hostname, _opts, cb) {
   // mqtt.js -> ws -> http(s).request uses lookup() if provided.
-  // Prefer IPv4; avoid ULA IPv6 (fd00::/8) which is not reachable publicly.
+  // Some callers may pass { all: true } and then expect an array return signature.
+  const opts = _opts && typeof _opts === "object" ? _opts : {};
+
   dns.lookup(hostname, { all: true, verbatim: true }, (err, addrs) => {
     if (err) return cb(err);
     const list = Array.isArray(addrs) ? addrs : [];
-    const v4 = list.find((a) => a?.address && net.isIP(a.address) === 4);
+
+    /** @type {Array<{address: string, family: 4|6}>} */
+    const normalized = list
+      .map((a) => {
+        if (typeof a === "string") {
+          const fam = net.isIP(a);
+          return fam ? { address: a, family: fam } : null;
+        }
+        if (a && typeof a === "object" && typeof a.address === "string") {
+          const fam = a.family || net.isIP(a.address);
+          return fam ? { address: a.address, family: fam } : null;
+        }
+        return null;
+      })
+      .filter(Boolean);
+
+    const v4 = normalized.find((a) => a.family === 4);
+    const v6Public = normalized.find((a) => a.family === 6 && !_isPrivateIPv6(a.address));
+    const v6Any = normalized.find((a) => a.family === 6);
+
+    // If caller asked for all addresses, return an array (prefer v4 first).
+    if (opts.all) {
+      const ordered = [
+        ...(v4 ? [v4] : []),
+        ...normalized.filter((a) => a !== v4 && a.family === 4),
+        ...(v6Public ? [v6Public] : []),
+        ...normalized.filter((a) => a !== v6Public && a.family === 6 && !_isPrivateIPv6(a.address)),
+      ];
+
+      if (!ordered.length && v6Any?.address && _isPrivateIPv6(v6Any.address)) {
+        return cb(
+          new Error(
+            `DNS for ${hostname} resolved only to private IPv6 (${v6Any.address}). Enable Cloudflare proxy (orange cloud) for the CNAME record.`
+          )
+        );
+      }
+      if (!ordered.length) return cb(new Error(`DNS lookup returned no usable addresses for ${hostname}`));
+      return cb(null, ordered);
+    }
+
+    // Otherwise return a single address.
     if (v4?.address) return cb(null, v4.address, 4);
+    if (v6Public?.address) return cb(null, v6Public.address, 6);
 
-    const v6 = list.find((a) => a?.address && net.isIP(a.address) === 6 && !_isPrivateIPv6(a.address));
-    if (v6?.address) return cb(null, v6.address, 6);
-
-    const anyV6 = list.find((a) => a?.address && net.isIP(a.address) === 6);
-    if (anyV6?.address && _isPrivateIPv6(anyV6.address)) {
+    if (v6Any?.address && _isPrivateIPv6(v6Any.address)) {
       return cb(
         new Error(
-          `DNS for ${hostname} resolved to private IPv6 (${anyV6.address}). Enable Cloudflare proxy (orange cloud) for the CNAME record.`
+          `DNS for ${hostname} resolved only to private IPv6 (${v6Any.address}). Enable Cloudflare proxy (orange cloud) for the CNAME record.`
         )
       );
     }

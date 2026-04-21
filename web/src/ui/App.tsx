@@ -79,6 +79,9 @@ export function App() {
   const [toast, setToast] = useState<{ tone: "good" | "bad" | "muted"; text: string } | null>(null);
   const [updateUrl, setUpdateUrl] = useState("");
   const [updateVersion, setUpdateVersion] = useState("");
+  const [cfgKey, setCfgKey] = useState("");
+  const [cfgValue, setCfgValue] = useState("");
+  const [cfgRestart, setCfgRestart] = useState(true);
   const socketRef = useRef<Socket | null>(null);
 
   const apiBase = useMemo(() => {
@@ -484,6 +487,64 @@ export function App() {
                     <span className="font-semibold">Check</span>: valida descarga/zip/deps sin activar.{" "}
                     <span className="font-semibold">Update</span>: descarga ZIP → instala deps → swap{" "}
                     <code className="rounded bg-white/5 px-1 py-0.5">/opt/h2train-app/current</code> → restart.
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-stroke bg-card/35 p-4">
+                  <div className="text-xs font-semibold text-muted">Config (remoto)</div>
+                  <div className="mt-2 grid grid-cols-1 gap-2">
+                    <input
+                      className="input"
+                      placeholder="KEY (ej: MQTT_HOST o API_URL)"
+                      value={cfgKey}
+                      onChange={(e) => setCfgKey(e.target.value)}
+                      disabled={
+                        Boolean(sel) && (busyCmd === `${sel.device_id}:app.config.set`)
+                      }
+                    />
+                    <input
+                      className="input"
+                      placeholder="VALUE (ej: mqtt.luxops.es)"
+                      value={cfgValue}
+                      onChange={(e) => setCfgValue(e.target.value)}
+                      disabled={
+                        Boolean(sel) && (busyCmd === `${sel.device_id}:app.config.set`)
+                      }
+                    />
+                    <label className="flex items-center gap-2 text-xs text-muted">
+                      <input
+                        type="checkbox"
+                        checked={cfgRestart}
+                        onChange={(e) => setCfgRestart(e.target.checked)}
+                        disabled={Boolean(sel) && (busyCmd === `${sel.device_id}:app.config.set`)}
+                      />
+                      Reiniciar app después de aplicar
+                    </label>
+                    <button
+                      className="btn btn-primary"
+                      disabled={busyCmd === `${sel.device_id}:app.config.set`}
+                      onClick={async () => {
+                        try {
+                          const key = cfgKey.trim();
+                          if (!key) throw new Error("KEY es requerido");
+                          // Permitimos VALUE vacío (para setear a cadena vacía).
+                          const value = cfgValue;
+                          await sendCmd(sel.device_id, "app.config.set", { env: { [key]: value }, restart: cfgRestart });
+                          setCfgKey("");
+                          setCfgValue("");
+                        } catch (e: any) {
+                          setToast({ tone: "bad", text: String(e?.message || e) });
+                        } finally {
+                          setBusyCmd(null);
+                        }
+                      }}
+                    >
+                      {busyCmd === `${sel.device_id}:app.config.set` ? "Aplicando…" : "Aplicar"}
+                    </button>
+                  </div>
+                  <div className="mt-2 text-xs text-muted">
+                    Envía <code className="rounded bg-white/5 px-1 py-0.5">app.config.set</code> al agente del dispositivo.
+                    Puedes aplicar un parámetro por vez (rápido y seguro).
                   </div>
                 </div>
               </>

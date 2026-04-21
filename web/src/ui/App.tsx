@@ -419,27 +419,49 @@ export function App() {
                       value={updateUrl}
                       onChange={(e) => setUpdateUrl(e.target.value)}
                     />
-                    <button
-                      className="btn btn-primary"
-                      disabled={busyCmd === `${sel.device_id}:app.update`}
-                      onClick={async () => {
-                        try {
-                          const version = updateVersion.trim();
-                          const url = updateUrl.trim();
-                          if (!version || !url) throw new Error("Version y URL son requeridos");
-                          await sendCmd(sel.device_id, "app.update", { version, url });
-                        } catch (e: any) {
-                          setToast({ tone: "bad", text: String(e?.message || e) });
-                        } finally {
-                          setBusyCmd(null);
-                        }
-                      }}
-                    >
-                      {busyCmd === `${sel.device_id}:app.update` ? "Actualizando…" : "Update"}
-                    </button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        className="btn btn-ghost"
+                        disabled={busyCmd === `${sel.device_id}:app.update.check`}
+                        onClick={async () => {
+                          try {
+                            const version = updateVersion.trim();
+                            const url = updateUrl.trim();
+                            if (!version || !url) throw new Error("Version y URL son requeridos");
+                            await sendCmd(sel.device_id, "app.update.check", { version, url });
+                          } catch (e: any) {
+                            setToast({ tone: "bad", text: String(e?.message || e) });
+                          } finally {
+                            setBusyCmd(null);
+                          }
+                        }}
+                      >
+                        {busyCmd === `${sel.device_id}:app.update.check` ? "Comprobando…" : "Check"}
+                      </button>
+                      <button
+                        className="btn btn-primary"
+                        disabled={busyCmd === `${sel.device_id}:app.update`}
+                        onClick={async () => {
+                          try {
+                            const version = updateVersion.trim();
+                            const url = updateUrl.trim();
+                            if (!version || !url) throw new Error("Version y URL son requeridos");
+                            await sendCmd(sel.device_id, "app.update", { version, url });
+                          } catch (e: any) {
+                            setToast({ tone: "bad", text: String(e?.message || e) });
+                          } finally {
+                            setBusyCmd(null);
+                          }
+                        }}
+                      >
+                        {busyCmd === `${sel.device_id}:app.update` ? "Actualizando…" : "Update"}
+                      </button>
+                    </div>
                   </div>
                   <div className="mt-2 text-xs text-muted">
-                    Descarga ZIP → instala deps → swap <code className="rounded bg-white/5 px-1 py-0.5">/opt/h2train-app/current</code> → restart.
+                    <span className="font-semibold">Check</span>: valida descarga/zip/deps sin activar.{" "}
+                    <span className="font-semibold">Update</span>: descarga ZIP → instala deps → swap{" "}
+                    <code className="rounded bg-white/5 px-1 py-0.5">/opt/h2train-app/current</code> → restart.
                   </div>
                 </div>
               </>

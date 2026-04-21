@@ -406,18 +406,40 @@ export function App() {
 
                 <div className="mt-4 rounded-2xl border border-stroke bg-card/35 p-4">
                   <div className="text-xs font-semibold text-muted">Update (ZIP)</div>
+                  {busyCmd && sel ? (
+                    busyCmd === `${sel.device_id}:app.update` || busyCmd === `${sel.device_id}:app.update.check` ? (
+                      <div className="mt-2 flex items-center gap-2 rounded-2xl border border-stroke bg-white/5 px-3 py-2 text-xs text-muted">
+                        <span
+                          className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/20 border-t-white/70"
+                          aria-hidden="true"
+                        />
+                        <span className="font-semibold text-text">
+                          {busyCmd === `${sel.device_id}:app.update.check` ? "Comprobando actualización…" : "Actualizando…"}
+                        </span>
+                        <span>Por favor no cierres ni pulses de nuevo.</span>
+                      </div>
+                    ) : null
+                  ) : null}
                   <div className="mt-2 grid grid-cols-1 gap-2">
                     <input
                       className="input"
                       placeholder="Version (ej: v1.2.3 o 2026-04-15)"
                       value={updateVersion}
                       onChange={(e) => setUpdateVersion(e.target.value)}
+                      disabled={
+                        Boolean(sel) &&
+                        (busyCmd === `${sel.device_id}:app.update` || busyCmd === `${sel.device_id}:app.update.check`)
+                      }
                     />
                     <input
                       className="input"
                       placeholder="URL del zip (https://...)"
                       value={updateUrl}
                       onChange={(e) => setUpdateUrl(e.target.value)}
+                      disabled={
+                        Boolean(sel) &&
+                        (busyCmd === `${sel.device_id}:app.update` || busyCmd === `${sel.device_id}:app.update.check`)
+                      }
                     />
                     <div className="grid grid-cols-2 gap-2">
                       <button

@@ -96,6 +96,7 @@ export function App() {
   const [pKeyHex, setPKeyHex] = useState("");
   const [pWindowLen, setPWindowLen] = useState("256");
   const [pAuto2s, setPAuto2s] = useState(false);
+  const [pPresetRestart, setPPresetRestart] = useState(true);
   const socketRef = useRef<Socket | null>(null);
 
   const apiBase = useMemo(() => {
@@ -628,6 +629,11 @@ export function App() {
                       <input className="input" value={pKeyHex} onChange={(e) => setPKeyHex(e.target.value)} placeholder="Clave 128b hex (opcional)" />
                     </div>
 
+                    <label className="flex items-center gap-2 text-xs text-muted">
+                      <input type="checkbox" checked={pPresetRestart} onChange={(e) => setPPresetRestart(e.target.checked)} />
+                      Reiniciar app después de aplicar presets
+                    </label>
+
                     <button
                       className="btn btn-primary"
                       disabled={busyCmd === `${sel.device_id}:app.config.set`}
@@ -649,8 +655,13 @@ export function App() {
                             H2T_TD8_WINDOW_LEN: pWindowLen.trim(),
                             H2T_TD8_AUTO_EVERY_2S: pAuto2s ? "1" : "0"
                           };
-                          await sendCmd(sel.device_id, "app.config.set", { env, restart: true });
-                          setToast({ tone: "good", text: "Config aplicada (parser/TD8). Reiniciando app…" });
+                          await sendCmd(sel.device_id, "app.config.set", { env, restart: pPresetRestart });
+                          setToast({
+                            tone: "good",
+                            text: pPresetRestart
+                              ? "Config aplicada (parser/TD8). Reiniciando app…"
+                              : "Config aplicada (parser/TD8). Reinicio desactivado."
+                          });
                         } catch (e: any) {
                           setToast({ tone: "bad", text: String(e?.message || e) });
                         } finally {
@@ -658,11 +669,11 @@ export function App() {
                         }
                       }}
                     >
-                      Aplicar presets (reinicia)
+                      Aplicar presets
                     </button>
                   </div>
                   <div className="mt-2 text-xs text-muted">
-                    Esto escribe variables <code className="rounded bg-white/5 px-1 py-0.5">H2T_*</code> en el .env del dispositivo y reinicia.
+                    Esto escribe variables <code className="rounded bg-white/5 px-1 py-0.5">H2T_*</code> en el .env del dispositivo.
                   </div>
                 </div>
               </>

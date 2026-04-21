@@ -136,6 +136,7 @@ const mqttClient = mqtt.connect(MQTT_URL, {
   // Ensure WSS connect doesn't use broken IPv6 ULA resolutions.
   wsOptions: {
     lookup: _lookupPreferV4,
+    family: 4,
     path: MQTT_WS_PATH,
   },
 });

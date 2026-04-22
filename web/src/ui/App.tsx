@@ -590,7 +590,8 @@ export function App() {
                         onClick={async () => {
                           try {
                             const enabled = !(sel.telemetry as any)?.app_runtime_stream_on;
-                            await sendCmd(sel.device_id, "app.stream.set", { enabled, interval_sec: 2 });
+                            // 10Hz key polling for low-latency UX.
+                            await sendCmd(sel.device_id, "app.stream.set", { enabled, interval_sec: 0.1, runtime_every_sec: 2 });
                             // Marcador local (no fiable, pero ayuda UI).
                             setDevices((prev) => ({
                               ...prev,

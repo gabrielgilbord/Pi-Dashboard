@@ -24,6 +24,7 @@ type DeviceTelemetry = {
   hostname?: string;
   app_runtime?: any;
   app_key?: any;
+  app_stream?: { enabled?: boolean; interval_sec?: number; runtime_every_sec?: number };
 };
 
 type Device = {
@@ -589,20 +590,9 @@ export function App() {
                         disabled={busyCmd === `${sel.device_id}:app.stream.set`}
                         onClick={async () => {
                           try {
-                            const enabled = !(sel.telemetry as any)?.app_runtime_stream_on;
+                            const enabled = !Boolean(sel.telemetry?.app_stream?.enabled);
                             // 10Hz key polling for low-latency UX.
                             await sendCmd(sel.device_id, "app.stream.set", { enabled, interval_sec: 0.1, runtime_every_sec: 2 });
-                            // Marcador local (no fiable, pero ayuda UI).
-                            setDevices((prev) => ({
-                              ...prev,
-                              [sel.device_id]: {
-                                ...prev[sel.device_id],
-                                telemetry: {
-                                  ...(prev[sel.device_id]?.telemetry || {}),
-                                  app_runtime_stream_on: enabled
-                                } as any
-                              }
-                            }));
                           } catch (e: any) {
                             setToast({ tone: "bad", text: String(e?.message || e) });
                           } finally {
@@ -612,7 +602,7 @@ export function App() {
                       >
                         {busyCmd === `${sel.device_id}:app.stream.set`
                           ? "Cambiando…"
-                          : (sel.telemetry as any)?.app_runtime_stream_on
+                          : sel.telemetry?.app_stream?.enabled
                             ? "Stop stream"
                             : "Start stream"}
                       </button>

@@ -22,6 +22,7 @@ type DeviceTelemetry = {
   name?: string;
   location?: string;
   hostname?: string;
+  app_runtime?: any;
 };
 
 type Device = {
@@ -560,6 +561,74 @@ export function App() {
                   <div className="mt-2 text-xs text-muted">
                     Envía <code className="rounded bg-white/5 px-1 py-0.5">app.config.set</code> al agente del dispositivo.
                     Puedes aplicar un parámetro por vez (rápido y seguro).
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-stroke bg-card/35 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-semibold text-muted">Señal / Clave (runtime)</div>
+                    <div className="flex gap-2">
+                      <button
+                        className="btn btn-ghost"
+                        disabled={busyCmd === `${sel.device_id}:app.snapshot`}
+                        onClick={async () => {
+                          try {
+                            await sendCmd(sel.device_id, "app.snapshot");
+                          } catch (e: any) {
+                            setToast({ tone: "bad", text: String(e?.message || e) });
+                          } finally {
+                            setBusyCmd(null);
+                          }
+                        }}
+                      >
+                        {busyCmd === `${sel.device_id}:app.snapshot` ? "Pidiendo…" : "Snapshot"}
+                      </button>
+                      <button
+                        className="btn btn-primary"
+                        disabled={busyCmd === `${sel.device_id}:app.stream.set`}
+                        onClick={async () => {
+                          try {
+                            const enabled = !(sel.telemetry as any)?.app_runtime_stream_on;
+                            await sendCmd(sel.device_id, "app.stream.set", { enabled, interval_sec: 2 });
+                            // Marcador local (no fiable, pero ayuda UI).
+                            setDevices((prev) => ({
+                              ...prev,
+                              [sel.device_id]: {
+                                ...prev[sel.device_id],
+                                telemetry: {
+                                  ...(prev[sel.device_id]?.telemetry || {}),
+                                  app_runtime_stream_on: enabled
+                                } as any
+                              }
+                            }));
+                          } catch (e: any) {
+                            setToast({ tone: "bad", text: String(e?.message || e) });
+                          } finally {
+                            setBusyCmd(null);
+                          }
+                        }}
+                      >
+                        {busyCmd === `${sel.device_id}:app.stream.set`
+                          ? "Cambiando…"
+                          : (sel.telemetry as any)?.app_runtime_stream_on
+                            ? "Stop stream"
+                            : "Start stream"}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 text-xs text-muted">
+                    {sel.telemetry?.app_runtime?.key_hex ? (
+                      <>
+                        <div className="font-semibold text-text">Key (hex):</div>
+                        <div className="mt-1 break-all rounded-xl bg-white/5 p-2 text-[11px] text-text">
+                          {String(sel.telemetry.app_runtime.key_hex)}
+                        </div>
+                        <div className="mt-2">{String(sel.telemetry.app_runtime.entropy_label || "")}</div>
+                      </>
+                    ) : (
+                      "Pulsa Snapshot o activa Stream para ver clave/señal."
+                    )}
                   </div>
                 </div>
 

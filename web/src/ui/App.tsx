@@ -588,19 +588,9 @@ export function App() {
                         disabled={busyCmd === `${sel.device_id}:app.stream.set`}
                         onClick={async () => {
                           try {
-                            const enabled = !(sel.telemetry as any)?.app_runtime_stream_on;
-                            await sendCmd(sel.device_id, "app.stream.set", { enabled, interval_sec: 2 });
-                            // Marcador local (no fiable, pero ayuda UI).
-                            setDevices((prev) => ({
-                              ...prev,
-                              [sel.device_id]: {
-                                ...prev[sel.device_id],
-                                telemetry: {
-                                  ...(prev[sel.device_id]?.telemetry || {}),
-                                  app_runtime_stream_on: enabled
-                                } as any
-                              }
-                            }));
+                            const streamEnabled = Boolean((sel.telemetry as any)?.app_stream?.enabled);
+                            const enabled = !streamEnabled;
+                            await sendCmd(sel.device_id, "app.stream.set", { enabled, interval_sec: 0.1 });
                           } catch (e: any) {
                             setToast({ tone: "bad", text: String(e?.message || e) });
                           } finally {
@@ -610,7 +600,7 @@ export function App() {
                       >
                         {busyCmd === `${sel.device_id}:app.stream.set`
                           ? "Switching…"
-                          : (sel.telemetry as any)?.app_runtime_stream_on
+                          : Boolean((sel.telemetry as any)?.app_stream?.enabled)
                             ? "Stop stream"
                             : "Start stream"}
                       </button>
@@ -618,13 +608,16 @@ export function App() {
                   </div>
 
                   <div className="mt-3 text-xs text-muted">
-                    {sel.telemetry?.app_runtime?.key_hex ? (
+                    {(sel.telemetry as any)?.app_key?.key_hex ? (
                       <>
                         <div className="font-semibold text-text">Key (hex):</div>
                         <div className="mt-1 break-all rounded-xl bg-white/5 p-2 text-[11px] text-text">
-                          {String(sel.telemetry.app_runtime.key_hex)}
+                          {String((sel.telemetry as any).app_key.key_hex)}
                         </div>
-                        <div className="mt-2">{String(sel.telemetry.app_runtime.entropy_label || "")}</div>
+                        <div className="mt-2">{String((sel.telemetry as any).app_key.entropy_label || "")}</div>
+                        <div className="mt-1 text-[11px] text-muted">
+                          seq={String((sel.telemetry as any).app_key.key_seq ?? "—")} • age_ms={String((sel.telemetry as any).app_key.age_ms ?? "—")}
+                        </div>
                       </>
                     ) : (
                       "Press Snapshot or enable Stream to view key/signal."

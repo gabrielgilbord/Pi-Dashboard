@@ -33,8 +33,9 @@ const io = new SocketIOServer(server, {
 /** @type {Map<string, any>} */
 const devices = new Map();
 
-/** @type {Map<string, any>} */
-const snapshotPollers = new Map(); // deviceId -> interval handle
+// NOTE: We intentionally avoid server-side snapshot polling.
+// Polling is initiated from the web UI (client-side) so opening the web page
+// never triggers background commands and we can suppress "last response" noise.
 
 function upsertDevice(deviceId, patch) {
   const cur = devices.get(deviceId) || { device_id: deviceId };
@@ -273,67 +274,13 @@ app.post("/api/devices/:deviceId/command", (req, res) => {
   if (!deviceId) return res.status(400).json({ ok: false, error: "deviceId requerido" });
   if (!cmd) return res.status(400).json({ ok: false, error: "cmd requerido" });
 
-  function _stopSnapshotPoller() {
-    const h = snapshotPollers.get(deviceId);
-    if (h) clearTimeout(h);
-    snapshotPollers.delete(deviceId);
-  }
-
-  function _startSnapshotPoller(intervalMs = 100) {
-    _stopSnapshotPoller();
-    const ms = Math.max(100, Math.min(2000, Number(intervalMs) || 100));
-    let nextAt = Date.now();
-    let inFlight = false;
-
-    const tick = () => {
-      // Stop if MQTT is offline (avoid queue buildup).
-      if (!mqttClient.connected) {
-        inFlight = false;
-        const h = setTimeout(tick, ms);
-        snapshotPollers.set(deviceId, h);
-        return;
-      }
-
-      const now = Date.now();
-      // Catch up without accumulating lag.
-      if (now > nextAt + 500) nextAt = now;
-
-      if (!inFlight && now >= nextAt) {
-        inFlight = true;
-        nextAt += ms;
-        try {
-          const snapId = nanoid();
-          const topic = `${BASE_TOPIC}/${deviceId}/cmd`;
-          const payload = JSON.stringify({ id: snapId, cmd: "app.snapshot" });
-          // QoS0 for snapshots to avoid QoS1 ack backpressure at 10Hz.
-          mqttClient.publish(topic, payload, { qos: 0, retain: false }, () => {
-            inFlight = false;
-          });
-        } catch {
-          inFlight = false;
-        }
-      }
-
-      const delay = Math.max(5, nextAt - Date.now());
-      const h = setTimeout(tick, delay);
-      snapshotPollers.set(deviceId, h);
-    };
-
-    tick();
-  }
-
   const topic = `${BASE_TOPIC}/${deviceId}/cmd`;
   const payloadObj = { id, cmd };
   if (args && typeof args === "object") payloadObj.args = args;
   const payload = JSON.stringify(payloadObj);
-  mqttClient.publish(topic, payload, { qos: 1, retain: false }, (err) => {
+  const qos = cmd === "app.snapshot" ? 0 : 1;
+  mqttClient.publish(topic, payload, { qos, retain: false }, (err) => {
     if (err) return res.status(500).json({ ok: false, error: String(err) });
-    // Dashboard-side 10Hz verification polling: force snapshots while streaming is enabled.
-    if (cmd === "app.stream.set") {
-      const enabled = Boolean(args && typeof args === "object" ? args.enabled : false);
-      if (enabled) _startSnapshotPoller(100);
-      else _stopSnapshotPoller();
-    }
     res.json({ ok: true, id, device_id: deviceId, cmd });
   });
 });

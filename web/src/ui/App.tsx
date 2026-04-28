@@ -78,6 +78,9 @@ export function App() {
   const [filter, setFilter] = useState<"all" | "online" | "offline">("all");
   const [busyCmd, setBusyCmd] = useState<string | null>(null);
   const [toast, setToast] = useState<{ tone: "good" | "bad" | "muted"; text: string } | null>(null);
+  const [showKeyPanel, setShowKeyPanel] = useState(false);
+  const silentReqIdsRef = useRef<Set<string>>(new Set());
+  const snapTimerRef = useRef<any>(null);
   const [updateUrl, setUpdateUrl] = useState("");
   const [updateVersion, setUpdateVersion] = useState("");
   const [cfgKey, setCfgKey] = useState("");
@@ -125,13 +128,32 @@ export function App() {
       setDevices((prev) => ({ ...prev, [device_id]: device }));
     });
     s.on("device_resp", (resp: any) => {
+      const reqId = String(resp?.req_id || "");
+      if (reqId && silentReqIdsRef.current.has(reqId)) {
+        silentReqIdsRef.current.delete(reqId);
+        return;
+      }
       setLastResp(resp);
     });
     return () => {
+      if (snapTimerRef.current) {
+        clearInterval(snapTimerRef.current);
+        snapTimerRef.current = null;
+      }
       s.close();
       socketRef.current = null;
     };
   }, [apiBase]);
+
+  useEffect(() => {
+    // Reset UI "session" state when changing device selection.
+    setLastResp(null);
+    setShowKeyPanel(false);
+    if (snapTimerRef.current) {
+      clearInterval(snapTimerRef.current);
+      snapTimerRef.current = null;
+    }
+  }, [selected]);
 
   const list = useMemo(() => Object.values(devices).sort((a, b) => a.device_id.localeCompare(b.device_id)), [devices]);
 
@@ -160,16 +182,17 @@ export function App() {
     return { total, online, offline };
   }, [list]);
 
-  async function sendCmd(deviceId: string, cmd: string, args?: any) {
+  async function sendCmd(deviceId: string, cmd: string, args?: any, opts?: { id?: string; silent?: boolean }) {
     setBusyCmd(`${deviceId}:${cmd}`);
+    const id = opts?.id;
     const r = await fetch(`${apiBase}/api/devices/${encodeURIComponent(deviceId)}/command`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(args ? { cmd, args } : { cmd })
+      body: JSON.stringify(args ? { cmd, args, ...(id ? { id } : {}) } : { cmd, ...(id ? { id } : {}) })
     });
     const j = await r.json();
     if (!j?.ok) throw new Error(j?.error || "Error sending command");
-    setToast({ tone: "good", text: `Sent: ${cmd} → ${deviceId}` });
+    if (!opts?.silent) setToast({ tone: "good", text: `Sent: ${cmd} → ${deviceId}` });
     return j;
   }
 
@@ -573,6 +596,7 @@ export function App() {
                         disabled={busyCmd === `${sel.device_id}:app.snapshot`}
                         onClick={async () => {
                           try {
+                            setShowKeyPanel(true);
                             await sendCmd(sel.device_id, "app.snapshot");
                           } catch (e: any) {
                             setToast({ tone: "bad", text: String(e?.message || e) });
@@ -590,7 +614,22 @@ export function App() {
                           try {
                             const streamEnabled = Boolean((sel.telemetry as any)?.app_stream?.enabled);
                             const enabled = !streamEnabled;
+                            setShowKeyPanel(true);
                             await sendCmd(sel.device_id, "app.stream.set", { enabled, interval_sec: 0.1 });
+
+                            if (snapTimerRef.current) {
+                              clearInterval(snapTimerRef.current);
+                              snapTimerRef.current = null;
+                            }
+                            if (enabled) {
+                              // Client-side 10Hz snapshot polling (silent): forces app_key/app_runtime publication at 10Hz
+                              // without spamming the "Last response" panel.
+                              snapTimerRef.current = setInterval(() => {
+                                const reqId = `snap_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+                                silentReqIdsRef.current.add(reqId);
+                                sendCmd(sel.device_id, "app.snapshot", undefined, { id: reqId, silent: true }).catch(() => {});
+                              }, 100);
+                            }
                           } catch (e: any) {
                             setToast({ tone: "bad", text: String(e?.message || e) });
                           } finally {
@@ -608,7 +647,7 @@ export function App() {
                   </div>
 
                   <div className="mt-3 text-xs text-muted">
-                    {(() => {
+                    {(showKeyPanel ? (() => {
                       const t: any = sel.telemetry as any;
                       const keyHex = t?.app_key?.key_hex || t?.app_runtime?.key_hex || "";
                       const entropyLabel = t?.app_key?.entropy_label || t?.app_runtime?.entropy_label || "";
@@ -629,7 +668,7 @@ export function App() {
                         ) : null}
                       </>
                       );
-                    })() || "Press Snapshot or enable Stream to view key/signal."}
+                    })() : null) || "Press Snapshot or enable Stream to view key/signal."}
                   </div>
                 </div>
 

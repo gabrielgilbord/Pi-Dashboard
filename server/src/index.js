@@ -20,6 +20,8 @@ const MQTT_PASSWORD = process.env.MQTT_PASSWORD || "";
 const BASE_TOPIC = process.env.BASE_TOPIC || "dt";
 // Mosquitto websockets commonly use "/mqtt".
 const MQTT_WS_PATH = String(process.env.MQTT_WS_PATH || "/mqtt").trim() || "/mqtt";
+const DEBUG_TELEMETRY = String(process.env.DEBUG_TELEMETRY || "").trim() === "1";
+const DEBUG_TELEMETRY_DEVICE = String(process.env.DEBUG_TELEMETRY_DEVICE || "").trim();
 
 const app = express();
 app.use(cors());
@@ -42,6 +44,18 @@ function upsertDevice(deviceId, patch) {
   const next = { ...cur, ...patch };
   devices.set(deviceId, next);
   return next;
+}
+
+function _shouldDebugDevice(deviceId) {
+  if (!DEBUG_TELEMETRY) return false;
+  if (!DEBUG_TELEMETRY_DEVICE) return true;
+  return String(deviceId) === DEBUG_TELEMETRY_DEVICE;
+}
+
+function _shortHex(h) {
+  const s = typeof h === "string" ? h : "";
+  if (!s) return "";
+  return s.length <= 16 ? s : `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
 
 function isOnline(d) {
@@ -240,12 +254,41 @@ mqttClient.on("message", (topic, payloadBuf) => {
       last_seen_ts: payload.ts || Date.now() / 1000,
       telemetry: merged,
     });
+    if (_shouldDebugDevice(deviceId)) {
+      try {
+        const recvTs = Date.now() / 1000;
+        const appKeyHex = merged?.app_key?.key_hex || merged?.app_runtime?.key_hex || "";
+        const appKeySeq = merged?.app_key?.key_seq;
+        const appStream = merged?.app_stream?.enabled;
+        const srcTs = typeof payload.ts === "number" ? payload.ts : null;
+        const lagMs = srcTs ? Math.round((recvTs - srcTs) * 1000) : null;
+        // eslint-disable-next-line no-console
+        console.log(
+          `[pi-dashboard][telemetry] dev=${deviceId} recv=${recvTs.toFixed(3)} src=${srcTs?.toFixed?.(3) ?? "—"} lag_ms=${lagMs ?? "—"} stream=${String(appStream)} seq=${appKeySeq ?? "—"} key=${_shortHex(appKeyHex)}`
+        );
+      } catch {
+        // ignore
+      }
+    }
     io.emit("device_telemetry", { device_id: deviceId, device: d });
     return;
   }
 
   if (kind === "ack") {
     const reqId = parts[3] || "noid";
+    if (_shouldDebugDevice(deviceId)) {
+      try {
+        const recvTs = Date.now() / 1000;
+        const srcTs = typeof payload?.ts === "number" ? payload.ts : null;
+        const lagMs = srcTs ? Math.round((recvTs - srcTs) * 1000) : null;
+        // eslint-disable-next-line no-console
+        console.log(
+          `[pi-dashboard][ack] dev=${deviceId} req=${reqId} recv=${recvTs.toFixed(3)} src=${srcTs?.toFixed?.(3) ?? "—"} lag_ms=${lagMs ?? "—"} ok=${String(Boolean(payload?.ok))} cmd=${String(payload?.cmd || "")}`
+        );
+      } catch {
+        // ignore
+      }
+    }
     io.emit("device_resp", { device_id: deviceId, req_id: reqId, payload });
     return;
   }
@@ -264,6 +307,23 @@ app.get("/api/devices", (_req, res) => {
     telemetry: d.telemetry || null,
   }));
   res.json({ ok: true, devices: list });
+});
+
+app.get("/api/debug/device/:deviceId", (req, res) => {
+  const deviceId = String(req.params.deviceId || "").trim();
+  const d = devices.get(deviceId);
+  if (!d) return res.status(404).json({ ok: false, error: "device not found" });
+  const now = Date.now() / 1000;
+  const srcTs = d?.telemetry?.ts;
+  const lagMs = typeof srcTs === "number" ? Math.round((now - srcTs) * 1000) : null;
+  res.json({
+    ok: true,
+    device_id: deviceId,
+    server_ts: now,
+    lag_ms: lagMs,
+    status: d.status || null,
+    telemetry: d.telemetry || null,
+  });
 });
 
 app.post("/api/devices/:deviceId/command", (req, res) => {

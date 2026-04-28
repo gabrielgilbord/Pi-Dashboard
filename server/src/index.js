@@ -212,10 +212,32 @@ mqttClient.on("message", (topic, payloadBuf) => {
     const prev = devices.get(deviceId) || { device_id: deviceId };
     const prevTel = prev.telemetry && typeof prev.telemetry === "object" ? prev.telemetry : {};
     const nextTel = payload && typeof payload === "object" ? payload : {};
-    // Merge telemetry so partial updates don't wipe prior fields (e.g. keep last app_key until it changes).
+    // Merge telemetry so partial updates don't wipe prior fields.
+    // IMPORTANT: keep last good app_key unless we receive a new one with key_hex.
+    const merged = { ...prevTel, ...nextTel };
+    try {
+      const prevKey = prevTel?.app_key;
+      const nextKey = nextTel?.app_key;
+      const prevHex = typeof prevKey?.key_hex === "string" ? prevKey.key_hex : "";
+      const nextHex = typeof nextKey?.key_hex === "string" ? nextKey.key_hex : "";
+      // If incoming app_key is missing/empty, keep previous app_key (avoid clobbering with ok:false or partial payloads).
+      if (prevKey && (!nextKey || !nextHex)) {
+        merged.app_key = prevKey;
+      }
+      // If we kept/received a key, track when we last saw it (server-side).
+      const useHex = nextHex || prevHex;
+      if (useHex) {
+        merged.app_key_meta = {
+          key_hex: useHex,
+          last_seen_ts: (payload && payload.ts) ? payload.ts : Date.now() / 1000,
+        };
+      }
+    } catch {
+      // ignore
+    }
     const d = upsertDevice(deviceId, {
       last_seen_ts: payload.ts || Date.now() / 1000,
-      telemetry: { ...prevTel, ...nextTel },
+      telemetry: merged,
     });
     io.emit("device_telemetry", { device_id: deviceId, device: d });
     return;

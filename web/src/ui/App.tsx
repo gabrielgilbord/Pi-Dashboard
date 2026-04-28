@@ -23,8 +23,6 @@ type DeviceTelemetry = {
   location?: string;
   hostname?: string;
   app_runtime?: any;
-  app_key?: any;
-  app_stream?: { enabled?: boolean; interval_sec?: number; runtime_every_sec?: number };
 };
 
 type Device = {
@@ -170,8 +168,8 @@ export function App() {
       body: JSON.stringify(args ? { cmd, args } : { cmd })
     });
     const j = await r.json();
-    if (!j?.ok) throw new Error(j?.error || "Error enviando comando");
-    setToast({ tone: "good", text: `Enviado: ${cmd} → ${deviceId}` });
+    if (!j?.ok) throw new Error(j?.error || "Error sending command");
+    setToast({ tone: "good", text: `Sent: ${cmd} → ${deviceId}` });
     return j;
   }
 
@@ -193,7 +191,7 @@ export function App() {
                 <div className="min-w-0">
                   <div className="text-2xl font-semibold tracking-tight">Pi Dashboard</div>
                   <div className="mt-1 text-sm text-muted">
-                    Control remoto por MQTT (Mosquitto): estado en tiempo real, comandos y respuestas.
+                    Remote MQTT (Mosquitto) control: real-time status, commands, and responses.
                   </div>
                 </div>
               </div>
@@ -217,8 +215,8 @@ export function App() {
             <div className="w-full max-w-md space-y-3">
               <div className="rounded-2xl border border-stroke bg-card/40 p-3">
                 <div className="flex items-center justify-between">
-                  <div className="text-xs text-muted">Servidor</div>
-                  <Chip tone={connected ? "good" : "bad"}>{connected ? "Conectado" : "Desconectado"}</Chip>
+                  <div className="text-xs text-muted">Server</div>
+                  <Chip tone={connected ? "good" : "bad"}>{connected ? "Connected" : "Disconnected"}</Chip>
                 </div>
                 <div className="mt-2 text-sm text-muted">{apiBase}</div>
               </div>
@@ -226,12 +224,12 @@ export function App() {
               <div className="flex gap-2">
                 <input
                   className="input"
-                  placeholder="Buscar por ID o estado de app…"
+                  placeholder="Search by ID or app status…"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
                 <select className="input w-40" value={filter} onChange={(e) => setFilter(e.target.value as any)}>
-                  <option value="all">Todos</option>
+                  <option value="all">All</option>
                   <option value="online">Online</option>
                   <option value="offline">Offline</option>
                 </select>
@@ -244,10 +242,10 @@ export function App() {
           <div className="glass-strong shine rounded-3xl p-5 lg:col-span-2">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold">Dispositivos</div>
-                <div className="mt-1 text-xs text-muted">Selecciona uno para ver detalle y ejecutar comandos.</div>
+                <div className="text-sm font-semibold">Devices</div>
+                <div className="mt-1 text-xs text-muted">Select a device to view details and run commands.</div>
               </div>
-              <div className="text-xs text-muted">{listFiltered.length} visibles</div>
+              <div className="text-xs text-muted">{listFiltered.length} visible</div>
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -295,11 +293,11 @@ export function App() {
                         <div className="mt-0.5 text-sm font-semibold">{fmtUptime(d.status?.uptime_sec)}</div>
                       </div>
                       <div className="rounded-xl bg-white/5 p-2">
-                        <div className="text-[11px] text-muted">Servicio</div>
+                        <div className="text-[11px] text-muted">Service</div>
                         <div className="mt-0.5 truncate text-sm font-semibold">{d.status?.app?.service || "—"}</div>
                       </div>
                       <div className="rounded-xl bg-white/5 p-2">
-                        <div className="text-[11px] text-muted">Razón</div>
+                        <div className="text-[11px] text-muted">Reason</div>
                         <div className="mt-0.5 truncate text-sm font-semibold">{d.status?.reason || "—"}</div>
                       </div>
                     </div>
@@ -309,7 +307,7 @@ export function App() {
 
               {listFiltered.length === 0 ? (
                 <div className="sm:col-span-2 rounded-2xl border border-stroke bg-card/35 p-6 text-sm text-muted">
-                  No hay dispositivos visibles. Esperando <code className="rounded bg-white/5 px-1.5 py-0.5">dt/&lt;id&gt;/status</code> desde MQTT.
+                  No visible devices yet. Waiting for <code className="rounded bg-white/5 px-1.5 py-0.5">dt/&lt;id&gt;/status</code> from MQTT.
                 </div>
               ) : null}
             </div>
@@ -318,20 +316,20 @@ export function App() {
           <div className="glass-strong shine rounded-3xl p-5">
             <div className="flex items-center justify-between">
               <div className="text-sm font-semibold">Control</div>
-              {sel ? <Chip tone={sel.status?.online ? "good" : "bad"}>{sel.status?.online ? "Online" : "Offline"}</Chip> : <Chip tone="muted">Sin selección</Chip>}
+              {sel ? <Chip tone={sel.status?.online ? "good" : "bad"}>{sel.status?.online ? "Online" : "Offline"}</Chip> : <Chip tone="muted">No selection</Chip>}
             </div>
             {!sel ? (
-              <div className="mt-3 text-sm text-muted">Selecciona un dispositivo para ver acciones.</div>
+              <div className="mt-3 text-sm text-muted">Select a device to view actions.</div>
             ) : (
               <>
                 <div className="mt-4 rounded-2xl border border-stroke bg-card/35 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-xs text-muted">Dispositivo</div>
+                      <div className="text-xs text-muted">Device</div>
                       <div className="mt-1 truncate text-lg font-semibold">{sel.telemetry?.name ? `${sel.telemetry.name} (${sel.device_id})` : sel.device_id}</div>
                       <div className="mt-2 flex flex-wrap gap-2">
                         <Chip tone={sel.status?.online ? "good" : "bad"}>{sel.status?.online ? "online" : "offline"}</Chip>
-                        <Chip tone="muted">últ. hb {fmtAgeSeconds(sel.status?.ts)}</Chip>
+                        <Chip tone="muted">last hb {fmtAgeSeconds(sel.status?.ts)}</Chip>
                         <Chip tone="muted">uptime {fmtUptime(sel.status?.uptime_sec)}</Chip>
                       </div>
                     </div>
@@ -361,7 +359,7 @@ export function App() {
                       }
                     }}
                   >
-                    {busyCmd === `${sel.device_id}:ping` ? "Enviando…" : "Ping"}
+                    {busyCmd === `${sel.device_id}:ping` ? "Sending…" : "Ping"}
                   </button>
                   <button
                     className="btn btn-ghost"
@@ -376,7 +374,7 @@ export function App() {
                       }
                     }}
                   >
-                    {busyCmd === `${sel.device_id}:app.status` ? "Enviando…" : "Estado"}
+                    {busyCmd === `${sel.device_id}:app.status` ? "Sending…" : "Status"}
                   </button>
                   <button
                     className="btn btn-ghost"
@@ -391,7 +389,7 @@ export function App() {
                       }
                     }}
                   >
-                    {busyCmd === `${sel.device_id}:app.start` ? "Enviando…" : "Start"}
+                    {busyCmd === `${sel.device_id}:app.start` ? "Sending…" : "Start"}
                   </button>
                   <button
                     className="btn btn-ghost"
@@ -406,7 +404,7 @@ export function App() {
                       }
                     }}
                   >
-                    {busyCmd === `${sel.device_id}:app.stop` ? "Enviando…" : "Stop"}
+                    {busyCmd === `${sel.device_id}:app.stop` ? "Sending…" : "Stop"}
                   </button>
                   <button
                     className="btn btn-danger col-span-2"
@@ -421,7 +419,7 @@ export function App() {
                       }
                     }}
                   >
-                    {busyCmd === `${sel.device_id}:app.restart` ? "Enviando…" : "Restart app"}
+                    {busyCmd === `${sel.device_id}:app.restart` ? "Sending…" : "Restart app"}
                   </button>
                 </div>
 
@@ -435,9 +433,9 @@ export function App() {
                           aria-hidden="true"
                         />
                         <span className="font-semibold text-text">
-                          {busyCmd === `${sel.device_id}:app.update.check` ? "Comprobando actualización…" : "Actualizando…"}
+                          {busyCmd === `${sel.device_id}:app.update.check` ? "Checking update…" : "Updating…"}
                         </span>
-                        <span>Por favor no cierres ni pulses de nuevo.</span>
+                        <span>Please do not close or click again.</span>
                       </div>
                     ) : null
                   ) : null}
@@ -454,7 +452,7 @@ export function App() {
                     />
                     <input
                       className="input"
-                      placeholder="URL del zip (https://...)"
+                      placeholder="ZIP URL (https://...)"
                       value={updateUrl}
                       onChange={(e) => setUpdateUrl(e.target.value)}
                       disabled={
@@ -470,7 +468,7 @@ export function App() {
                           try {
                             const version = updateVersion.trim();
                             const url = updateUrl.trim();
-                            if (!version || !url) throw new Error("Version y URL son requeridos");
+                            if (!version || !url) throw new Error("Version and URL are required");
                             await sendCmd(sel.device_id, "app.update.check", { version, url });
                           } catch (e: any) {
                             setToast({ tone: "bad", text: String(e?.message || e) });
@@ -479,7 +477,7 @@ export function App() {
                           }
                         }}
                       >
-                        {busyCmd === `${sel.device_id}:app.update.check` ? "Comprobando…" : "Check"}
+                        {busyCmd === `${sel.device_id}:app.update.check` ? "Checking…" : "Check"}
                       </button>
                       <button
                         className="btn btn-primary"
@@ -488,7 +486,7 @@ export function App() {
                           try {
                             const version = updateVersion.trim();
                             const url = updateUrl.trim();
-                            if (!version || !url) throw new Error("Version y URL son requeridos");
+                            if (!version || !url) throw new Error("Version and URL are required");
                             await sendCmd(sel.device_id, "app.update", { version, url });
                           } catch (e: any) {
                             setToast({ tone: "bad", text: String(e?.message || e) });
@@ -497,23 +495,23 @@ export function App() {
                           }
                         }}
                       >
-                        {busyCmd === `${sel.device_id}:app.update` ? "Actualizando…" : "Update"}
+                        {busyCmd === `${sel.device_id}:app.update` ? "Updating…" : "Update"}
                       </button>
                     </div>
                   </div>
                   <div className="mt-2 text-xs text-muted">
-                    <span className="font-semibold">Check</span>: valida descarga/zip/deps sin activar.{" "}
-                    <span className="font-semibold">Update</span>: descarga ZIP → instala deps → swap{" "}
+                    <span className="font-semibold">Check</span>: validates download/zip/deps without activating.{" "}
+                    <span className="font-semibold">Update</span>: downloads ZIP → installs deps → swaps{" "}
                     <code className="rounded bg-white/5 px-1 py-0.5">/opt/h2train-app/current</code> → restart.
                   </div>
                 </div>
 
                 <div className="mt-4 rounded-2xl border border-stroke bg-card/35 p-4">
-                  <div className="text-xs font-semibold text-muted">Config (remoto)</div>
+                  <div className="text-xs font-semibold text-muted">Remote config</div>
                   <div className="mt-2 grid grid-cols-1 gap-2">
                     <input
                       className="input"
-                      placeholder="KEY (ej: MQTT_HOST o API_URL)"
+                      placeholder="KEY (e.g. MQTT_HOST or API_URL)"
                       value={cfgKey}
                       onChange={(e) => setCfgKey(e.target.value)}
                       disabled={
@@ -522,7 +520,7 @@ export function App() {
                     />
                     <input
                       className="input"
-                      placeholder="VALUE (ej: mqtt.luxops.es)"
+                      placeholder="VALUE (e.g. mqtt.luxops.es)"
                       value={cfgValue}
                       onChange={(e) => setCfgValue(e.target.value)}
                       disabled={
@@ -536,7 +534,7 @@ export function App() {
                         onChange={(e) => setCfgRestart(e.target.checked)}
                         disabled={Boolean(sel) && (busyCmd === `${sel.device_id}:app.config.set`)}
                       />
-                      Reiniciar app después de aplicar
+                      Restart app after applying
                     </label>
                     <button
                       className="btn btn-primary"
@@ -544,8 +542,8 @@ export function App() {
                       onClick={async () => {
                         try {
                           const key = cfgKey.trim();
-                          if (!key) throw new Error("KEY es requerido");
-                          // Permitimos VALUE vacío (para setear a cadena vacía).
+                          if (!key) throw new Error("KEY is required");
+                          // Empty VALUE is allowed (to set an empty string).
                           const value = cfgValue;
                           await sendCmd(sel.device_id, "app.config.set", { env: { [key]: value }, restart: cfgRestart });
                           setCfgKey("");
@@ -557,18 +555,18 @@ export function App() {
                         }
                       }}
                     >
-                      {busyCmd === `${sel.device_id}:app.config.set` ? "Aplicando…" : "Aplicar"}
+                      {busyCmd === `${sel.device_id}:app.config.set` ? "Applying…" : "Apply"}
                     </button>
                   </div>
                   <div className="mt-2 text-xs text-muted">
-                    Envía <code className="rounded bg-white/5 px-1 py-0.5">app.config.set</code> al agente del dispositivo.
-                    Puedes aplicar un parámetro por vez (rápido y seguro).
+                    Sends <code className="rounded bg-white/5 px-1 py-0.5">app.config.set</code> to the device agent.
+                    You can apply one parameter at a time (fast and safe).
                   </div>
                 </div>
 
                 <div className="mt-4 rounded-2xl border border-stroke bg-card/35 p-4">
                   <div className="flex items-center justify-between">
-                    <div className="text-xs font-semibold text-muted">Señal / Clave (runtime)</div>
+                    <div className="text-xs font-semibold text-muted">Signal / Key (runtime)</div>
                     <div className="flex gap-2">
                       <button
                         className="btn btn-ghost"
@@ -583,16 +581,26 @@ export function App() {
                           }
                         }}
                       >
-                        {busyCmd === `${sel.device_id}:app.snapshot` ? "Pidiendo…" : "Snapshot"}
+                        {busyCmd === `${sel.device_id}:app.snapshot` ? "Requesting…" : "Snapshot"}
                       </button>
                       <button
                         className="btn btn-primary"
                         disabled={busyCmd === `${sel.device_id}:app.stream.set`}
                         onClick={async () => {
                           try {
-                            const enabled = !Boolean(sel.telemetry?.app_stream?.enabled);
-                            // 10Hz key polling for low-latency UX.
-                            await sendCmd(sel.device_id, "app.stream.set", { enabled, interval_sec: 0.1, runtime_every_sec: 2 });
+                            const enabled = !(sel.telemetry as any)?.app_runtime_stream_on;
+                            await sendCmd(sel.device_id, "app.stream.set", { enabled, interval_sec: 2 });
+                            // Marcador local (no fiable, pero ayuda UI).
+                            setDevices((prev) => ({
+                              ...prev,
+                              [sel.device_id]: {
+                                ...prev[sel.device_id],
+                                telemetry: {
+                                  ...(prev[sel.device_id]?.telemetry || {}),
+                                  app_runtime_stream_on: enabled
+                                } as any
+                              }
+                            }));
                           } catch (e: any) {
                             setToast({ tone: "bad", text: String(e?.message || e) });
                           } finally {
@@ -601,8 +609,8 @@ export function App() {
                         }}
                       >
                         {busyCmd === `${sel.device_id}:app.stream.set`
-                          ? "Cambiando…"
-                          : sel.telemetry?.app_stream?.enabled
+                          ? "Switching…"
+                          : (sel.telemetry as any)?.app_runtime_stream_on
                             ? "Stop stream"
                             : "Start stream"}
                       </button>
@@ -610,24 +618,16 @@ export function App() {
                   </div>
 
                   <div className="mt-3 text-xs text-muted">
-                    {(sel.telemetry as any)?.app_key?.key_hex || sel.telemetry?.app_runtime?.key_hex ? (
+                    {sel.telemetry?.app_runtime?.key_hex ? (
                       <>
                         <div className="font-semibold text-text">Key (hex):</div>
                         <div className="mt-1 break-all rounded-xl bg-white/5 p-2 text-[11px] text-text">
-                          {String(((sel.telemetry as any)?.app_key?.key_hex) || sel.telemetry?.app_runtime?.key_hex || "")}
+                          {String(sel.telemetry.app_runtime.key_hex)}
                         </div>
-                        <div className="mt-2">
-                          {String(((sel.telemetry as any)?.app_key?.entropy_label) || sel.telemetry?.app_runtime?.entropy_label || "")}
-                        </div>
-                        {(sel.telemetry as any)?.app_key?.key_seq !== undefined ? (
-                          <div className="mt-1 text-[11px] text-muted">
-                            seq={String((sel.telemetry as any).app_key.key_seq)} • age_ms=
-                            {Math.max(0, Math.round((Date.now() / 1000 - Number((sel.telemetry as any).app_key.ts || 0)) * 1000))}
-                          </div>
-                        ) : null}
+                        <div className="mt-2">{String(sel.telemetry.app_runtime.entropy_label || "")}</div>
                       </>
                     ) : (
-                      "Pulsa Snapshot o activa Stream para ver clave/señal."
+                      "Press Snapshot or enable Stream to view key/signal."
                     )}
                   </div>
                 </div>
@@ -647,60 +647,60 @@ export function App() {
                     </div>
 
                     <select className="input" value={pPipeline} onChange={(e) => setPPipeline(e.target.value)}>
-                      <option value="RNS+HKDF (actual)">Pipeline: RNS+HKDF (actual)</option>
-                      <option value="Acumulativo 11 bits/muestra">Pipeline: Acumulativo 11 bits/muestra</option>
+                      <option value="RNS+HKDF (actual)">Pipeline: RNS+HKDF (current)</option>
+                      <option value="Acumulativo 11 bits/muestra">Pipeline: Cumulative 11-bit/sample</option>
                     </select>
 
                     <select className="input" value={pEcgSource} onChange={(e) => setPEcgSource(e.target.value)}>
-                      <option value="ECG 3bx en vivo">Fuente ECG: ECG 3bx en vivo</option>
-                      <option value="ECG sintético (función)">Fuente ECG: ECG sintético (función)</option>
+                      <option value="ECG 3bx en vivo">ECG source: Live ECG 3bx</option>
+                      <option value="ECG sintético (función)">ECG source: Synthetic ECG (function)</option>
                     </select>
 
                     <div className="grid grid-cols-2 gap-2">
-                      <input className="input" value={pEntropyThr} onChange={(e) => setPEntropyThr(e.target.value)} placeholder="Umbral entropía (ej: 0.85)" />
-                      <input className="input" value={pAnalysisSamples} onChange={(e) => setPAnalysisSamples(e.target.value)} placeholder="Análisis conjunto (muestras)" />
+                      <input className="input" value={pEntropyThr} onChange={(e) => setPEntropyThr(e.target.value)} placeholder="Entropy threshold (e.g. 0.85)" />
+                      <input className="input" value={pAnalysisSamples} onChange={(e) => setPAnalysisSamples(e.target.value)} placeholder="Joint analysis (samples)" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
                       <select className="input" value={pInvalidPolicy} onChange={(e) => setPInvalidPolicy(e.target.value)}>
-                        <option value="Descartar no válidas">No válidas: Descartar</option>
-                        <option value="Guardar para recombinar">No válidas: Guardar para recombinar</option>
+                        <option value="Descartar no válidas">Invalid keys: Discard</option>
+                        <option value="Guardar para recombinar">Invalid keys: Keep for recombination</option>
                       </select>
                       <select className="input" value={pRecombine} onChange={(e) => setPRecombine(e.target.value)}>
-                        <option value="Mitad + mitad">Recombinación: Mitad + mitad</option>
-                        <option value="Alternar bits">Recombinación: Alternar bits</option>
-                        <option value="XOR + SHA256">Recombinación: XOR + SHA256</option>
+                        <option value="Mitad + mitad">Recombination: Half + half</option>
+                        <option value="Alternar bits">Recombination: Alternate bits</option>
+                        <option value="XOR + SHA256">Recombination: XOR + SHA256</option>
                       </select>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
-                      <input className="input" value={pMaxInvalidPool} onChange={(e) => setPMaxInvalidPool(e.target.value)} placeholder="Pool no válidas (máx)" />
+                      <input className="input" value={pMaxInvalidPool} onChange={(e) => setPMaxInvalidPool(e.target.value)} placeholder="Invalid pool (max)" />
                       <select className="input" value={pScanMode} onChange={(e) => setPScanMode(e.target.value)}>
-                        <option value="No solapado (128b)">Barrido: No solapado (128b)</option>
-                        <option value="Desplazamiento 11b">Barrido: Desplazamiento 11b</option>
-                        <option value="Desplazamiento 1b (máximo)">Barrido: Desplazamiento 1b (máximo)</option>
+                        <option value="No solapado (128b)">Scan: Non-overlapping (128b)</option>
+                        <option value="Desplazamiento 11b">Scan: Shift 11b</option>
+                        <option value="Desplazamiento 1b (máximo)">Scan: Shift 1b (max)</option>
                       </select>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
-                      <input className="input" value={pWindowLen} onChange={(e) => setPWindowLen(e.target.value)} placeholder="Ventana (flujo) (ej: 256)" />
+                      <input className="input" value={pWindowLen} onChange={(e) => setPWindowLen(e.target.value)} placeholder="Window (flow) (e.g. 256)" />
                       <label className="flex items-center gap-2 rounded-2xl border border-stroke bg-white/5 px-3 py-2 text-xs text-muted">
                         <input type="checkbox" checked={pKeepTailBits} onChange={(e) => setPKeepTailBits(e.target.checked)} />
-                        Conservar bits sobrantes
+                        Keep leftover bits
                       </label>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
                       <label className="flex items-center gap-2 rounded-2xl border border-stroke bg-white/5 px-3 py-2 text-xs text-muted">
                         <input type="checkbox" checked={pAuto2s} onChange={(e) => setPAuto2s(e.target.checked)} />
-                        Auto cada 2s (flujo)
+                        Auto every 2s (flow)
                       </label>
-                      <input className="input" value={pKeyHex} onChange={(e) => setPKeyHex(e.target.value)} placeholder="Clave 128b hex (opcional)" />
+                      <input className="input" value={pKeyHex} onChange={(e) => setPKeyHex(e.target.value)} placeholder="128b key hex (optional)" />
                     </div>
 
                     <label className="flex items-center gap-2 text-xs text-muted">
                       <input type="checkbox" checked={pPresetRestart} onChange={(e) => setPPresetRestart(e.target.checked)} />
-                      Reiniciar app después de aplicar presets
+                      Restart app after applying presets
                     </label>
 
                     <button
@@ -728,8 +728,8 @@ export function App() {
                           setToast({
                             tone: "good",
                             text: pPresetRestart
-                              ? "Config aplicada (parser/TD8). Reiniciando app…"
-                              : "Config aplicada (parser/TD8). Reinicio desactivado."
+                              ? "Config applied (parser/TD8). Restarting app…"
+                              : "Config applied (parser/TD8). Restart disabled."
                           });
                         } catch (e: any) {
                           setToast({ tone: "bad", text: String(e?.message || e) });
@@ -738,7 +738,7 @@ export function App() {
                         }
                       }}
                     >
-                      Aplicar presets
+                      Apply presets
                     </button>
                     <button
                       className="btn btn-ghost"
@@ -753,7 +753,7 @@ export function App() {
                         }
                       }}
                     >
-                      {busyCmd === `${sel.device_id}:app.config.get` ? "Leyendo…" : "Leer config"}
+                      {busyCmd === `${sel.device_id}:app.config.get` ? "Reading…" : "Read config"}
                     </button>
                     <button
                       className="btn btn-ghost"
@@ -768,7 +768,7 @@ export function App() {
                         }
                       }}
                     >
-                      {busyCmd === `${sel.device_id}:app.env.get` ? "Leyendo…" : "Leer env (runtime)"}
+                      {busyCmd === `${sel.device_id}:app.env.get` ? "Reading…" : "Read env (runtime)"}
                     </button>
                     <button
                       className="btn btn-ghost"
@@ -783,18 +783,18 @@ export function App() {
                         }
                       }}
                     >
-                      {busyCmd === `${sel.device_id}:app.code.get` ? "Leyendo…" : "Leer app.py (versión)"}
+                      {busyCmd === `${sel.device_id}:app.code.get` ? "Reading…" : "Read app.py (version)"}
                     </button>
                   </div>
                   <div className="mt-2 text-xs text-muted">
-                    Esto escribe variables <code className="rounded bg-white/5 px-1 py-0.5">H2T_*</code> en el .env del dispositivo.
+                    This writes <code className="rounded bg-white/5 px-1 py-0.5">H2T_*</code> variables into the device .env file.
                   </div>
                 </div>
               </>
             )}
 
             <div className="mt-4">
-              <div className="text-xs font-semibold text-muted">Última respuesta</div>
+              <div className="text-xs font-semibold text-muted">Last response</div>
               <pre className="mt-2 max-h-64 overflow-auto rounded-2xl border border-stroke bg-card/35 p-3 text-xs text-muted">
                 {lastResp ? JSON.stringify(lastResp, null, 2) : "—"}
               </pre>
@@ -813,7 +813,7 @@ export function App() {
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <div className="text-xs text-muted">Notificación</div>
+                <div className="text-xs text-muted">Notification</div>
                 <div className={classNames("mt-1 font-semibold", toast.tone === "good" ? "text-good" : toast.tone === "bad" ? "text-bad" : "text-text")}>
                   {toast.text}
                 </div>
@@ -822,7 +822,7 @@ export function App() {
                 className="btn btn-ghost px-2 py-1 text-xs"
                 onClick={() => setToast(null)}
               >
-                Cerrar
+                Close
               </button>
             </div>
           </div>

@@ -206,9 +206,13 @@ mqttClient.on("message", (topic, payloadBuf) => {
   }
 
   if (kind === "telemetry") {
+    const prev = devices.get(deviceId) || { device_id: deviceId };
+    const prevTel = prev.telemetry && typeof prev.telemetry === "object" ? prev.telemetry : {};
+    const nextTel = payload && typeof payload === "object" ? payload : {};
+    // Merge telemetry so partial updates don't wipe prior fields (e.g. keep last app_key until it changes).
     const d = upsertDevice(deviceId, {
       last_seen_ts: payload.ts || Date.now() / 1000,
-      telemetry: payload,
+      telemetry: { ...prevTel, ...nextTel },
     });
     io.emit("device_telemetry", { device_id: deviceId, device: d });
     return;

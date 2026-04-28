@@ -608,20 +608,28 @@ export function App() {
                   </div>
 
                   <div className="mt-3 text-xs text-muted">
-                    {(sel.telemetry as any)?.app_key?.key_hex ? (
+                    {(() => {
+                      const t: any = sel.telemetry as any;
+                      const keyHex = t?.app_key?.key_hex || t?.app_runtime?.key_hex || "";
+                      const entropyLabel = t?.app_key?.entropy_label || t?.app_runtime?.entropy_label || "";
+                      const keySeq = t?.app_key?.key_seq;
+                      const ageMs = t?.app_key?.age_ms;
+                      if (!keyHex) return null;
+                      return (
                       <>
                         <div className="font-semibold text-text">Key (hex):</div>
                         <div className="mt-1 break-all rounded-xl bg-white/5 p-2 text-[11px] text-text">
-                          {String((sel.telemetry as any).app_key.key_hex)}
+                          {String(keyHex)}
                         </div>
-                        <div className="mt-2">{String((sel.telemetry as any).app_key.entropy_label || "")}</div>
-                        <div className="mt-1 text-[11px] text-muted">
-                          seq={String((sel.telemetry as any).app_key.key_seq ?? "—")} • age_ms={String((sel.telemetry as any).app_key.age_ms ?? "—")}
-                        </div>
+                        {entropyLabel ? <div className="mt-2">{String(entropyLabel)}</div> : null}
+                        {keySeq !== undefined || ageMs !== undefined ? (
+                          <div className="mt-1 text-[11px] text-muted">
+                            seq={String(keySeq ?? "—")} • age_ms={String(ageMs ?? "—")}
+                          </div>
+                        ) : null}
                       </>
-                    ) : (
-                      "Press Snapshot or enable Stream to view key/signal."
-                    )}
+                      );
+                    })() || "Press Snapshot or enable Stream to view key/signal."}
                   </div>
                 </div>
 

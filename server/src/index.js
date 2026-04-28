@@ -275,24 +275,51 @@ app.post("/api/devices/:deviceId/command", (req, res) => {
 
   function _stopSnapshotPoller() {
     const h = snapshotPollers.get(deviceId);
-    if (h) clearInterval(h);
+    if (h) clearTimeout(h);
     snapshotPollers.delete(deviceId);
   }
 
   function _startSnapshotPoller(intervalMs = 100) {
     _stopSnapshotPoller();
-    const ms = Math.max(50, Math.min(2000, Number(intervalMs) || 100));
-    const handle = setInterval(() => {
-      try {
-        const snapId = nanoid();
-        const topic = `${BASE_TOPIC}/${deviceId}/cmd`;
-        const payload = JSON.stringify({ id: snapId, cmd: "app.snapshot" });
-        mqttClient.publish(topic, payload, { qos: 1, retain: false }, () => {});
-      } catch {
-        // ignore
+    const ms = Math.max(100, Math.min(2000, Number(intervalMs) || 100));
+    let nextAt = Date.now();
+    let inFlight = false;
+
+    const tick = () => {
+      // Stop if MQTT is offline (avoid queue buildup).
+      if (!mqttClient.connected) {
+        inFlight = false;
+        const h = setTimeout(tick, ms);
+        snapshotPollers.set(deviceId, h);
+        return;
       }
-    }, ms);
-    snapshotPollers.set(deviceId, handle);
+
+      const now = Date.now();
+      // Catch up without accumulating lag.
+      if (now > nextAt + 500) nextAt = now;
+
+      if (!inFlight && now >= nextAt) {
+        inFlight = true;
+        nextAt += ms;
+        try {
+          const snapId = nanoid();
+          const topic = `${BASE_TOPIC}/${deviceId}/cmd`;
+          const payload = JSON.stringify({ id: snapId, cmd: "app.snapshot" });
+          // QoS0 for snapshots to avoid QoS1 ack backpressure at 10Hz.
+          mqttClient.publish(topic, payload, { qos: 0, retain: false }, () => {
+            inFlight = false;
+          });
+        } catch {
+          inFlight = false;
+        }
+      }
+
+      const delay = Math.max(5, nextAt - Date.now());
+      const h = setTimeout(tick, delay);
+      snapshotPollers.set(deviceId, h);
+    };
+
+    tick();
   }
 
   const topic = `${BASE_TOPIC}/${deviceId}/cmd`;

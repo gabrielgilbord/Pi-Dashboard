@@ -81,8 +81,6 @@ export function App() {
   const [showKeyPanel, setShowKeyPanel] = useState(false);
   const [sessionStreamOn, setSessionStreamOn] = useState(false);
   const silentReqIdsRef = useRef<Set<string>>(new Set());
-  const sessionReqIdsRef = useRef<Set<string>>(new Set());
-  const interactedDevicesRef = useRef<Set<string>>(new Set());
   const snapTimerRef = useRef<any>(null);
   const [updateUrl, setUpdateUrl] = useState("");
   const [updateVersion, setUpdateVersion] = useState("");
@@ -132,15 +130,10 @@ export function App() {
     });
     s.on("device_resp", (resp: any) => {
       const reqId = String(resp?.req_id || "");
-      const deviceId = String(resp?.device_id || "");
       if (reqId && silentReqIdsRef.current.has(reqId)) {
         silentReqIdsRef.current.delete(reqId);
         return;
       }
-      const explicitMatch = reqId && sessionReqIdsRef.current.has(reqId);
-      const interactedMatch = deviceId && interactedDevicesRef.current.has(deviceId);
-      if (!explicitMatch && !interactedMatch) return;
-      if (explicitMatch) sessionReqIdsRef.current.delete(reqId);
       setLastResp(resp);
     });
     return () => {
@@ -158,9 +151,7 @@ export function App() {
     setLastResp(null);
     setShowKeyPanel(false);
     setSessionStreamOn(false);
-    sessionReqIdsRef.current.clear();
     silentReqIdsRef.current.clear();
-    interactedDevicesRef.current.clear();
     if (snapTimerRef.current) {
       clearInterval(snapTimerRef.current);
       snapTimerRef.current = null;
@@ -198,10 +189,6 @@ export function App() {
     setBusyCmd(`${deviceId}:${cmd}`);
     const id = opts?.id || `${cmd}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
     if (opts?.silent) silentReqIdsRef.current.add(id);
-    else {
-      sessionReqIdsRef.current.add(id);
-      interactedDevicesRef.current.add(deviceId);
-    }
     const r = await fetch(`${apiBase}/api/devices/${encodeURIComponent(deviceId)}/command`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

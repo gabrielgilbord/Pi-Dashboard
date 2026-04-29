@@ -79,7 +79,9 @@ export function App() {
   const [busyCmd, setBusyCmd] = useState<string | null>(null);
   const [toast, setToast] = useState<{ tone: "good" | "bad" | "muted"; text: string } | null>(null);
   const [showKeyPanel, setShowKeyPanel] = useState(false);
+  const [sessionStreamOn, setSessionStreamOn] = useState(false);
   const silentReqIdsRef = useRef<Set<string>>(new Set());
+  const sessionReqIdsRef = useRef<Set<string>>(new Set());
   const snapTimerRef = useRef<any>(null);
   const [updateUrl, setUpdateUrl] = useState("");
   const [updateVersion, setUpdateVersion] = useState("");
@@ -133,6 +135,8 @@ export function App() {
         silentReqIdsRef.current.delete(reqId);
         return;
       }
+      if (!reqId || !sessionReqIdsRef.current.has(reqId)) return;
+      sessionReqIdsRef.current.delete(reqId);
       setLastResp(resp);
     });
     return () => {
@@ -149,6 +153,9 @@ export function App() {
     // Reset UI "session" state when changing device selection.
     setLastResp(null);
     setShowKeyPanel(false);
+    setSessionStreamOn(false);
+    sessionReqIdsRef.current.clear();
+    silentReqIdsRef.current.clear();
     if (snapTimerRef.current) {
       clearInterval(snapTimerRef.current);
       snapTimerRef.current = null;
@@ -184,7 +191,9 @@ export function App() {
 
   async function sendCmd(deviceId: string, cmd: string, args?: any, opts?: { id?: string; silent?: boolean }) {
     setBusyCmd(`${deviceId}:${cmd}`);
-    const id = opts?.id;
+    const id = opts?.id || `${cmd}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    if (opts?.silent) silentReqIdsRef.current.add(id);
+    else sessionReqIdsRef.current.add(id);
     const r = await fetch(`${apiBase}/api/devices/${encodeURIComponent(deviceId)}/command`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -612,10 +621,10 @@ export function App() {
                         disabled={busyCmd === `${sel.device_id}:app.stream.set`}
                         onClick={async () => {
                           try {
-                            const streamEnabled = Boolean((sel.telemetry as any)?.app_stream?.enabled);
-                            const enabled = !streamEnabled;
+                            const enabled = !sessionStreamOn;
                             setShowKeyPanel(true);
                             await sendCmd(sel.device_id, "app.stream.set", { enabled, interval_sec: 0.1 });
+                            setSessionStreamOn(enabled);
 
                             if (snapTimerRef.current) {
                               clearInterval(snapTimerRef.current);
@@ -639,7 +648,7 @@ export function App() {
                       >
                         {busyCmd === `${sel.device_id}:app.stream.set`
                           ? "Switching…"
-                          : Boolean((sel.telemetry as any)?.app_stream?.enabled)
+                          : sessionStreamOn
                             ? "Stop stream"
                             : "Start stream"}
                       </button>
